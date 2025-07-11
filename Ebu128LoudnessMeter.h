@@ -43,7 +43,8 @@
 #ifndef __EBU128_LOUDNESS_METER__
 #define __EBU128_LOUDNESS_METER__
 
-#include "MacrosAndJuceHeaders.h"
+#include "DebugMacros.h"
+#include "juce_audio_basics/juce_audio_basics.h"
 #include "filters/SecondOrderIIRFilter.h"
 #include <map>
 #include <vector>
@@ -86,7 +87,8 @@ public:
                         int estimatedSamplesPerBlock, 
                         int expectedRequestRate);
     
-    void processBlock (const AudioSampleBuffer& buffer);
+    void processBlock (const juce::AudioBuffer<float>& buffer);
+    void processBlock (const juce::AudioBuffer<double>& buffer);
     
     float getShortTermLoudness() const;
     float getMaximumShortTermLoudness() const;
@@ -119,8 +121,9 @@ private:
      
      It also stores the number of input channels implicitely, set in prepareToPlay.
      */
-    AudioSampleBuffer bufferForMeasurement;
-    
+    juce::AudioSampleBuffer bufferForMeasurement;
+    void processBufferForMeasurement();
+
     SecondOrderIIRFilter preFilter;
     SecondOrderIIRFilter revisedLowFrequencyBCurveFilter;
 

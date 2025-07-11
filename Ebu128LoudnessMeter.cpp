@@ -90,7 +90,7 @@ Ebu128LoudnessMeter::Ebu128LoudnessMeter()
     currentBlockIsSilent (false)
 {
     DBG ("The longest possible measurement until a buffer overflow = "
-        + String (INT_MAX / 10. / 3600. / 365.) + " years");
+        + juce::String (INT_MAX / 10. / 3600. / 365.) + " years");
     
     // If this class is used without caution and processBlock
     // is called before prepareToPlay, divisions by zero
@@ -148,7 +148,7 @@ void Ebu128LoudnessMeter::prepareToPlay (double sampleRate,
         }
     }
     
-    DEB ("expectedRequestRate = " + String(expectedRequestRate));
+    DEB ("expectedRequestRate = " + juce::String(expectedRequestRate));
     
     // Figure out how many bins are needed.
     const int timeOfAccumulationForShortTerm = 3; // seconds.
@@ -158,9 +158,9 @@ void Ebu128LoudnessMeter::prepareToPlay (double sampleRate,
     numberOfSamplesInAllBins = numberOfBins * numberOfSamplesPerBin;
     
     numberOfBinsToCover100ms = int (0.1 * expectedRequestRate);
-    DEB ("numberOfBinsToCover100ms = " + String (numberOfBinsToCover100ms));
+    DEB ("numberOfBinsToCover100ms = " + juce::String (numberOfBinsToCover100ms));
     numberOfBinsToCover400ms = int (0.4 * expectedRequestRate);
-    DEB ("numberOfBinsToCover400ms = " + String (numberOfBinsToCover400ms));
+    DEB ("numberOfBinsToCover400ms = " + juce::String (numberOfBinsToCover400ms));
     numberOfSamplesIn400ms = numberOfBinsToCover400ms * numberOfSamplesPerBin;
     
     currentBin = 0;
@@ -193,14 +193,32 @@ void Ebu128LoudnessMeter::prepareToPlay (double sampleRate,
     reset();
 }
 
-void Ebu128LoudnessMeter::processBlock (const juce::AudioSampleBuffer& buffer)
+void Ebu128LoudnessMeter::processBlock (const juce::AudioBuffer<float>& buffer)
 {
     // Copy the buffer, such that all upcoming calculations won't affect
     // the audio output. We want the audio output to be exactly the same
     // as the input!
-    bufferForMeasurement = buffer; // This copies the audio to another memory
-                                   // location using memcpy.
-    
+    bufferForMeasurement = buffer; // This copies the audio to another memory location using memcpy.
+
+    processBufferForMeasurement();
+
+    // buffer = bufferForMeasurement; // Copy back the buffer to listen to the filtered audio.
+}
+
+void Ebu128LoudnessMeter::processBlock (const juce::AudioBuffer<double>& buffer)
+{
+    // Copy the buffer, such that all upcoming calculations won't affect
+    // the audio output. We want the audio output to be exactly the same
+    // as the input!
+    bufferForMeasurement.makeCopyOf(buffer, true); // This copies the audio to another memory
+
+    processBufferForMeasurement();
+
+    // buffer = bufferForMeasurement; // Copy back the buffer to listen to the filtered audio.
+}
+
+void Ebu128LoudnessMeter::processBufferForMeasurement()
+{
     if (freezeLoudnessRangeOnSilence)
     {
         // Detect if the block is silent.
@@ -208,7 +226,7 @@ void Ebu128LoudnessMeter::processBlock (const juce::AudioSampleBuffer& buffer)
         const float silenceThreshold = std::pow (10, 0.1 * -120);
             // -120dB -> approx. 1.0e-12
 
-        const float magnitude = buffer.getMagnitude (0, buffer.getNumSamples());
+        const float magnitude = bufferForMeasurement.getMagnitude (0, bufferForMeasurement.getNumSamples());
         if (magnitude < silenceThreshold)
         {
             currentBlockIsSilent = true;
@@ -232,12 +250,7 @@ void Ebu128LoudnessMeter::processBlock (const juce::AudioSampleBuffer& buffer)
     // Its name is in accordance to ITU-R BS.1770-2
     // (In ITU-R BS.1770-3 it's called 'a simple highpass filter').
     revisedLowFrequencyBCurveFilter.processBlock (bufferForMeasurement);
-    
-    // TEMP
-    // Copy back the buffer to listen to the filtered audio.
-    //   buffer = bufferForMeasurement;
-    // END TEMP
-    
+
     // STEP 2: Mean square.
     // --------------------
     for (int k = 0; k != bufferForMeasurement.getNumChannels(); ++k)
@@ -252,10 +265,10 @@ void Ebu128LoudnessMeter::processBlock (const juce::AudioSampleBuffer& buffer)
     // ---------------------------------------
     // To prevent EXC_BAD_ACCESS when the number of channels in the buffer
     // suddenly changes without calling prepareToPlay() in advance.
-    const int numberOfChannels = jmin (bufferForMeasurement.getNumChannels(),
+    const int numberOfChannels = juce::jmin (bufferForMeasurement.getNumChannels(),
                                        int (bin.size()),
                                        int (averageOfTheLast400ms.size()),
-                                       jmin (int (averageOfTheLast3s.size()),
+                                       juce::jmin (int (averageOfTheLast3s.size()),
                                              int (channelWeighting.size())));
     jassert (bufferForMeasurement.getNumChannels() == int (bin.size()));
     jassert (bufferForMeasurement.getNumChannels() == int (averageOfTheLast400ms.size()));
@@ -360,7 +373,7 @@ void Ebu128LoudnessMeter::processBlock (const juce::AudioSampleBuffer& buffer)
                         
                         if (weightedSum > 0.0)
                             // This refers to equation (2) in ITU-R BS.1770-2
-                            shortTermLoudness = jmax (float (-0.691 + 10.* std::log10(weightedSum)), minimalReturnValue);
+                            shortTermLoudness = juce::jmax (float (-0.691 + 10.* std::log10(weightedSum)), minimalReturnValue);
                         else
                             // Since returning a value of -nan most probably would lead to
                             // a malfunction, return the minimal return value.
@@ -407,7 +420,7 @@ void Ebu128LoudnessMeter::processBlock (const juce::AudioSampleBuffer& buffer)
                         
                         if (weightedSum > 0.0)
                             // This refers to equation (2) in ITU-R BS.1770-2
-                            momentaryLoudness = jmax (float (-0.691 + 10. * std::log10(weightedSum)), minimalReturnValue);
+                            momentaryLoudness = juce::jmax (float (-0.691 + 10. * std::log10(weightedSum)), minimalReturnValue);
                         else
                             // Since returning a value of -nan most probably would lead to
                             // a malfunction, return a minimal return value.
@@ -484,7 +497,7 @@ void Ebu128LoudnessMeter::processBlock (const juce::AudioSampleBuffer& buffer)
                     if (histogramOfBlockLoudness.size() > 0)
                     {
                         const double biggestLoudnessInHistogram = (--histogramOfBlockLoudness.end())->first * 0.1;
-                        // DEB ("biggestLoudnessInHistogram = " + String(biggestLoudnessInHistogram))
+                        // DEB ("biggestLoudnessInHistogram = " + juce::String(biggestLoudnessInHistogram))
                         if (relativeThreshold < biggestLoudnessInHistogram)
                         {
                             int closestBinAboveRelativeThresholdKey = int (relativeThreshold * 10.0);
@@ -588,7 +601,7 @@ void Ebu128LoudnessMeter::processBlock (const juce::AudioSampleBuffer& buffer)
                         if (histogramOfBlockLoudnessLRA.size() > 0)
                         {
                             const double biggestLoudnessInHistogramLRA = (--histogramOfBlockLoudnessLRA.end())->first * 0.1;
-                            // DEB ("biggestLoudnessInHistogramLRA = " + String(biggestLoudnessInHistogramLRA))
+                            // DEB ("biggestLoudnessInHistogramLRA = " + juce::String(biggestLoudnessInHistogramLRA))
                             if (relativeThresholdLRA < biggestLoudnessInHistogramLRA)
                             {
                                 int closestBinAboveRelativeThresholdKeyLRA = int (relativeThresholdLRA * 10.0);
@@ -621,14 +634,14 @@ void Ebu128LoudnessMeter::processBlock (const juce::AudioSampleBuffer& buffer)
 
                                     numberOfBlocksBelowStartBinLRA += startBinLRA->second;
                                 }
-                                // DEB("numberOfBlocks = " + String (numberOfBlocksLRA))
-                                // DEB("numberOfBlocksBelowStartBinLRA = " + String(numberOfBlocksBelowStartBinLRA))
+                                // DEB("numberOfBlocks = " + juce::String (numberOfBlocksLRA))
+                                // DEB("numberOfBlocksBelowStartBinLRA = " + juce::String(numberOfBlocksBelowStartBinLRA))
                                 
 //                                ++startBinLRA;
                             
                                 if (!(freezeLoudnessRangeOnSilence && currentBlockIsSilent))
                                     loudnessRangeStart = startBinLRA->first * 0.1;
-                                    // DEB("LRA starts at " + String (loudnessRangeStart))
+                                    // DEB("LRA starts at " + juce::String (loudnessRangeStart))
                                 // Else:
                                 // Holding the loudnessRangeStart on silence
                                 // helps reading it after the end of an audio
@@ -649,7 +662,7 @@ void Ebu128LoudnessMeter::processBlock (const juce::AudioSampleBuffer& buffer)
                             
                                 if (!(freezeLoudnessRangeOnSilence && currentBlockIsSilent))
                                     loudnessRangeEnd = endBinLRA->first * 0.1;
-                                    // DEB("LRA ends at " + String (loudnessRangeEnd))
+                                    // DEB("LRA ends at " + juce::String (loudnessRangeEnd))
                                 // Else:
                                 // Holding the loudnessRangeEnd on silence
                                 // helps reading it after the end of an audio
@@ -657,7 +670,7 @@ void Ebu128LoudnessMeter::processBlock (const juce::AudioSampleBuffer& buffer)
                                 // The measurement does not get interrupted by
                                 // this! It's only a temporary freeze.
                                 
-                                // DEB("LRA = " + String (loudnessRangeEnd - loudnessRangeStart))
+                                // DEB("LRA = " + juce::String (loudnessRangeEnd - loudnessRangeStart))
                             }
                         }
                     }
@@ -698,7 +711,7 @@ vector<float>& Ebu128LoudnessMeter::getMomentaryLoudnessForIndividualChannels()
         if (averageOfTheLast400ms[k] > 0.0f)
         {
             // This refers to equation (2) in ITU-R BS.1770-2
-            kthChannelMomentaryLoudness = jmax (float (-0.691 + 10. * std::log10(averageOfTheLast400ms[k])), minimalReturnValue);
+            kthChannelMomentaryLoudness = juce::jmax (float (-0.691 + 10. * std::log10(averageOfTheLast400ms[k])), minimalReturnValue);
         }
 
         momentaryLoudnessForIndividualChannels[k] = kthChannelMomentaryLoudness;

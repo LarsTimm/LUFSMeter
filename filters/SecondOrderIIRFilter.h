@@ -47,7 +47,7 @@
 #ifndef __FILTER_OF_SECOND_ORDER__
 #define __FILTER_OF_SECOND_ORDER__
 
-#include "../MacrosAndJuceHeaders.h"
+#include "juce_audio_basics/juce_audio_basics.h"
 
 //==============================================================================
 /** A second order IIR (infinite inpulse response) filter.
@@ -85,7 +85,7 @@ public:
     virtual void releaseResources();
 
     // Renders the next block.
-    void processBlock (AudioSampleBuffer& buffer);
+    void processBlock (juce::AudioSampleBuffer& buffer);
     
     void reset();
 
@@ -111,11 +111,11 @@ private:
 
     /** Stores the previous value of the variable factorForB2 for every audio channel.
      */
-    HeapBlock<double> z1;
+    juce::HeapBlock<double> z1;
 
     /** Stores the previous value of z1 for every audio channel.
      */
-    HeapBlock<double> z2;
+    juce::HeapBlock<double> z2;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SecondOrderIIRFilter);
 };
