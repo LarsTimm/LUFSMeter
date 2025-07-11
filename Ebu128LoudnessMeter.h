@@ -111,6 +111,8 @@ public:
     void setFreezeLoudnessRangeOnSilence (bool freeze);
     
     void reset();
+
+    void run(bool enable) {isRunning = enable;}
     
 private:
     static int round (double d);
@@ -262,6 +264,8 @@ private:
 
     bool freezeLoudnessRangeOnSilence;
     bool currentBlockIsSilent;
+
+    bool isRunning;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Ebu128LoudnessMeter);
 };

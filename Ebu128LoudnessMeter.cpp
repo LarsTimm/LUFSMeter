@@ -87,7 +87,8 @@ Ebu128LoudnessMeter::Ebu128LoudnessMeter()
     loudnessRangeStart (minimalReturnValue),
     loudnessRangeEnd (minimalReturnValue),
     freezeLoudnessRangeOnSilence (false),
-    currentBlockIsSilent (false)
+    currentBlockIsSilent (false),
+    isRunning (true)
 {
     DBG ("The longest possible measurement until a buffer overflow = "
         + juce::String (INT_MAX / 10. / 3600. / 365.) + " years");
@@ -195,26 +196,32 @@ void Ebu128LoudnessMeter::prepareToPlay (double sampleRate,
 
 void Ebu128LoudnessMeter::processBlock (const juce::AudioBuffer<float>& buffer)
 {
-    // Copy the buffer, such that all upcoming calculations won't affect
-    // the audio output. We want the audio output to be exactly the same
-    // as the input!
-    bufferForMeasurement = buffer; // This copies the audio to another memory location using memcpy.
+    if (isRunning)
+    {
+        // Copy the buffer, such that all upcoming calculations won't affect
+        // the audio output. We want the audio output to be exactly the same
+        // as the input!
+        bufferForMeasurement = buffer; // This copies the audio to another memory location using memcpy.
 
-    processBufferForMeasurement();
+        processBufferForMeasurement();
 
-    // buffer = bufferForMeasurement; // Copy back the buffer to listen to the filtered audio.
+        // buffer = bufferForMeasurement; // Copy back the buffer to listen to the filtered audio.
+    }
 }
 
 void Ebu128LoudnessMeter::processBlock (const juce::AudioBuffer<double>& buffer)
 {
-    // Copy the buffer, such that all upcoming calculations won't affect
-    // the audio output. We want the audio output to be exactly the same
-    // as the input!
-    bufferForMeasurement.makeCopyOf(buffer, true); // This copies the audio to another memory
+    if (isRunning)
+    {
+        // Copy the buffer, such that all upcoming calculations won't affect
+        // the audio output. We want the audio output to be exactly the same
+        // as the input!
+        bufferForMeasurement.makeCopyOf(buffer, true); // This copies the audio to another memory
 
-    processBufferForMeasurement();
+        processBufferForMeasurement();
 
-    // buffer = bufferForMeasurement; // Copy back the buffer to listen to the filtered audio.
+        // buffer = bufferForMeasurement; // Copy back the buffer to listen to the filtered audio.
+    }
 }
 
 void Ebu128LoudnessMeter::processBufferForMeasurement()
@@ -805,6 +812,8 @@ void Ebu128LoudnessMeter::reset()
     // Momentary loudness
     momentaryLoudness = minimalReturnValue;
     maximumMomentaryLoudness = minimalReturnValue;
+
+    isRunning = true;
 }
 
 int Ebu128LoudnessMeter::round (double d)
